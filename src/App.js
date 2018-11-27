@@ -41,7 +41,7 @@ class App extends Component {
     } else if (this.state.currentPhase === 'data upload complete') {
       return (
         <form id="analysisInitiationForm" onSubmit={this.populateDatabase}>
-          <button type="submit" id="startAnalysisBtn">Start Analysis</button>
+          <button type="submit" id="startAnalysisBtn">Populate Database</button>
         </form>
       )
     }
@@ -79,9 +79,15 @@ class App extends Component {
     })
   }
 
-
+  // Open the database connection. Opening will clear the current local stores and
+  // attempt to populate with the provided JSON data. Additioanlly, disable the submission 
+  // button and display a notification message once clicked. 
   populateDatabase(event) {
     event.preventDefault();
+    const message = document.createElement("div");
+    message.innerText = 'Please wait while the system attempts to load the data. This page will automatically refresh once complete.';
+    document.getElementById("analysisInitiationForm").appendChild(message);
+    document.getElementById('startAnalysisBtn').setAttribute("disabled", "disabled");
     db.open(() => { 
       db.populateStores(this.studentData, this.coursesData, this.courseRequestData, (test) => {
         console.log(test)
