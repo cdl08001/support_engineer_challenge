@@ -8,29 +8,40 @@ class App extends Component {
       currentPhase: 'waiting for data'
     }
     this.updateView = this.updateView.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
+    this.studentDataFile = null;
+    this.coursesDataFile = null;
+    this.courseRequestDataFile = null;
   }
 
 
   updateView() {
     if (this.state.currentPhase === 'waiting for data') {
       return (
-        <form id="fileSelectionForm">
+        <form id="fileSelectionForm" onSubmit={this.handleSubmit}>
           <div id="studentInput" className="dataInputSelector">
             Students.csv:
-            <input type="file" />
+            <input type="file" accept=".csv"/>
           </div>
           <div id="coursesInput" className="dataInputSelector">
             Courses.csv:
-            <input type="file" />
+            <input type="file" accept=".csv"/>
           </div>
           <div id="courseRequestInput" className="dataInputSelector">
-            Course_Requirements.csv:
-            <input type="file" />
+            Course_Requests.csv:
+            <input type="file" accept=".csv"/>
           </div> 
           <button type="submit" id="fileSelectorBtn">Submit</button>
         </form>
       )
     }
+  }
+
+  handleSubmit(event) {
+    event.preventDefault(); 
+    this.studentDataFile = event.target[0].files[0].path;
+    this.coursesDataFile = event.target[1].files[0].path;
+    this.courseRequestDataFile = event.target[2].files[0].path;
   }
 
 
