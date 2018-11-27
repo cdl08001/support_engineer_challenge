@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import './App.css';
-import convertToCSV from './helper_functions/csv_to_json.js';
+import csv from 'csvtojson';
 
 class App extends Component {
   constructor(props) {
@@ -10,9 +10,9 @@ class App extends Component {
     }
     this.updateView = this.updateView.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
-    this.studentDataFile = null;
-    this.coursesDataFile = null;
-    this.courseRequestDataFile = null;
+    this.studentData = null;
+    this.coursesData = null;
+    this.courseRequestData = null;
   }
 
 
@@ -39,11 +39,32 @@ class App extends Component {
   }
 
   handleSubmit(event) {
-    event.preventDefault(); 
-    this.studentDataFile = event.target[0].files[0].path;
-    this.coursesDataFile = event.target[1].files[0].path;
-    this.courseRequestDataFile = event.target[2].files[0].path;
-    convertToCSV(this.studentDataFile)
+    event.preventDefault();
+    const studentDataFile = event.target[0].files[0];
+    const coursesDataFile = event.target[1].files[0];
+    const courseRequestDataFile = event.target[2].files[0];
+    const dataFiles = [studentDataFile, coursesDataFile, courseRequestDataFile]
+    dataFiles.forEach((file, index) => {
+      const reader = new FileReader();
+      reader.onerror = (event) => {
+        console.log(event);
+        reader.abort();
+      }
+      reader.onload = (event) => {
+        csv()
+          .fromString(event.target.result)
+          .then((data) => {
+            if(index === 0) {
+              this.studentData = data;
+            } else if (index === 1) {
+              this.coursesData = data;
+            } else if (index === 2) {
+              this.courseRequestData = data;
+            }
+          })
+      }
+      reader.readAsText(dataFiles[index]);
+    })
   }
 
 
