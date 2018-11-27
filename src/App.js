@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import './App.css';
+import convertToCSV from './helper_functions/csv_to_json.js';
 
 class App extends Component {
   constructor(props) {
@@ -42,6 +43,7 @@ class App extends Component {
     this.studentDataFile = event.target[0].files[0].path;
     this.coursesDataFile = event.target[1].files[0].path;
     this.courseRequestDataFile = event.target[2].files[0].path;
+    convertToCSV(this.studentDataFile)
   }
 
 
