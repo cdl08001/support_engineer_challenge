@@ -1,25 +1,48 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
 import './App.css';
 
 class App extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      currentPhase: 'waiting for data'
+    }
+    this.updateView = this.updateView.bind(this);
+  }
+
+
+  updateView() {
+    if (this.state.currentPhase === 'waiting for data') {
+      return (
+        <form id="fileSelectionForm">
+          <div id="studentInput" className="dataInputSelector">
+            Students.csv:
+            <input type="file" />
+          </div>
+          <div id="coursesInput" className="dataInputSelector">
+            Courses.csv:
+            <input type="file" />
+          </div>
+          <div id="courseRequestInput" className="dataInputSelector">
+            Course_Requirements.csv:
+            <input type="file" />
+          </div> 
+          <button type="submit" id="fileSelectorBtn">Submit</button>
+        </form>
+      )
+    }
+  }
+
+
   render() {
     return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </header>
+      <div id="rootContents">
+        <div id="title">
+          <header>Support Engineer Challenge</header>
+        </div>
+        <div id="body">
+        {this.updateView()}
+        </div>
       </div>
     );
   }
