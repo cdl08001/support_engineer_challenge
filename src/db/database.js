@@ -61,7 +61,6 @@ const studentCourseDatabase = (() => {
         };
       };
     };
-
   }
 
   database.populateStores = (studentData, coursesData, courseRequestsData, cb) => {
@@ -172,7 +171,31 @@ const studentCourseDatabase = (() => {
     }
   }
 
-  // Students Store Query: iterate through all students and return the total credits for each
+  // Courses Store Query: Provided with a course list (array), return all associated subjects in uppercase (array)
+  database.getCourseSubjects = (courseList, cb) => {
+    const transaction = db.transaction(["courses"], "readonly");
+    const coursesStore = transaction.objectStore("courses");
+    const courseCodeIndex = coursesStore.index("course_code");
+    const subjectList = [];
+
+    courseList.forEach((courseCode, index) => {
+      const courseCodeIndexRequest = courseCodeIndex.get(courseCode);
+
+      courseCodeIndexRequest.onsuccess = (event) => {
+        subjectList.push(courseCodeIndexRequest.result.subject_area.toUpperCase());
+        if(index === courseList.length - 1) {
+          cb(null, subjectList);
+        }
+      }
+
+      courseCodeIndexRequest.onerror = (event) => {
+        cb(courseCodeIndexRequest.error);
+      }
+    })
+  }
+
+  // Students Store Query: iterate through all students and return those that have credit
+  // conflicts (Outside of the 12-24 range) 
   database.checkCredits = (cb) => {
     const transaction = db.transaction(["students"], "readonly");
     const studentsStore = transaction.objectStore("students");
@@ -192,7 +215,7 @@ const studentCourseDatabase = (() => {
           if(course_codes.length === 0) {
             const issueStudent = {
               studentId: studentId,
-              error: `Student is not present within course_requests.csv`,
+              error: `Student is not present within course requests file.`,
             };
             cb(null, issueStudent)
           } else {
@@ -222,6 +245,67 @@ const studentCourseDatabase = (() => {
         cursor.continue();
       }
     }
+    getCursorRequest.onerror = () => {
+      cb(getCursorRequest.error);
+    }
+  }
+
+  // Students Store Query: iterate through all students and return those that have
+  // subject conflicts (missing History\English\Science\Math)  
+  database.checkCourses = (cb) => {
+    const transaction = db.transaction(["students"], "readonly");
+    const studentsStore = transaction.objectStore("students");
+    const getCursorRequest = studentsStore.openCursor();
+
+    getCursorRequest.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        let studentId = cursor.value.student_id;
+        // Get course list array corresponding to current student
+        database.getStudentCourses(studentId, (err, course_codes) => {
+          if (err) {
+            throw err;
+          }
+          if(course_codes.length === 0) {
+            const issueStudent = {
+              studentId: studentId,
+              error: `Student is not present within course requests file.`,
+              missingSubjects: ['HISTORY', 'ENGLISH', 'SCIENCE', 'MATH'],
+            }
+            cb(null, issueStudent);
+          } else {
+            const missingSubjects = [];
+            database.getCourseSubjects(course_codes, (err, subjects) => {
+              if (err) {
+                throw err;
+              }
+              if (!subjects.some(subject => subject.includes('HISTORY'))) {
+                missingSubjects.push('HISTORY');
+              }
+              if (!subjects.some(subject => subject.includes('ENGLISH'))) {
+                missingSubjects.push('ENGLISH');
+              }
+              if (!subjects.some(subject => subject.includes('SCIENCE'))) {
+                missingSubjects.push('SCIENCE');
+              }
+              if (!subjects.some(subject => subject.includes('MATH'))) {
+                missingSubjects.push('MATH');
+              }
+              if (missingSubjects.length > 0) {
+                const issueStudent = {
+                  studentId: studentId,
+                  error: `Student is missing a required subject`,
+                  missingSubjects: missingSubjects, 
+                }
+                cb(null, issueStudent)         
+              }
+            })
+          }
+        })
+        cursor.continue();
+      }
+    }
+
     getCursorRequest.onerror = () => {
       cb(getCursorRequest.error);
     }
