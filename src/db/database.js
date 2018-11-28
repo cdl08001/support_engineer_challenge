@@ -108,6 +108,32 @@ const studentCourseDatabase = (() => {
 
   }
 
+  database.checkGrades = (cb) => {
+    const transaction = db.transaction(["students"], "readonly");
+    const studentsStore = transaction.objectStore("students");
+    const getCursorRequest = studentsStore.openCursor();
+    let problemGrades = [];
+
+    getCursorRequest.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        const grade = parseInt(cursor.value.grade_level);
+        if (grade < 9 || grade > 12 || grade === undefined || grade === "" || grade === null) {
+          problemGrades.push(cursor.value);
+          cursor.continue();
+        } else {
+          cursor.continue();
+        }
+      } else {
+        cb(null, problemGrades)
+      }
+    }
+
+    getCursorRequest.onerror = () => {
+      cb(getCursorRequest.error)
+    }
+  }
+
   return database;
 
 })()

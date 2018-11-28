@@ -7,11 +7,12 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      currentPhase: 'waiting for data'
+      currentPhase: 'waiting for data',
     }
     this.updateView = this.updateView.bind(this);
-    this.handleSubmit = this.handleSubmit.bind(this);
+    this.handleFileSelection = this.handleFileSelection.bind(this);
     this.populateDatabase = this.populateDatabase.bind(this);
+    this.handleGradeCheck = this.handleGradeCheck.bind(this);
     this.studentData = null;
     this.coursesData = null;
     this.courseRequestData = null;
@@ -22,7 +23,7 @@ class App extends Component {
   updateView() {
     if (this.state.currentPhase === 'waiting for data') {
       return (
-        <form id="fileSelectionForm" onSubmit={this.handleSubmit}>
+        <form id="fileSelectionForm" onSubmit={this.handleFileSelection}>
           <div id="studentInput" className="dataInputSelector">
             Students.csv:
             <input type="file" accept=".csv" required/>
@@ -40,13 +41,18 @@ class App extends Component {
       )
     } else if (this.state.currentPhase === 'data upload complete') {
       return (
-        <form id="analysisInitiationForm" onSubmit={this.populateDatabase}>
+        <form id="populateDatabaseForm" onSubmit={this.populateDatabase}>
           <button type="submit" id="startAnalysisBtn">Populate Database</button>
         </form>
       )
     } else if (this.state.currentPhase === 'database populated') {
       return (
-        <div>SUCCESS</div>
+        <div id="dataAnalysis">
+          <form id="gradeCheckForm" onSubmit={this.handleGradeCheck}>
+            Students must be between grades 9 and 12:
+            <button type="submit" id="gradeCheckBtn">Check Grade</button>
+          </form>
+        </div>
       )
     }
   }
@@ -54,7 +60,7 @@ class App extends Component {
   // Reads the contents of selected CSV files on submit, converts
   // into CSV format, and saves as local class properties. 
   // Updates state on completion. 
-  handleSubmit(event) {
+  handleFileSelection(event) {
     event.preventDefault();
     const studentDataFile = event.target[0].files[0];
     const coursesDataFile = event.target[1].files[0];
@@ -85,12 +91,13 @@ class App extends Component {
 
   // Open the database connection. Opening will clear the current local stores and
   // attempt to populate with the provided JSON data. Additioanlly, disable the submission 
-  // button and display a notification message once clicked. 
+  // button and display a notification message once clicked. Continuously check for completion
+  // or error once population is submitted.
   populateDatabase(event) {
     event.preventDefault();
     const message = document.createElement("div");
     message.innerText = 'Please wait while the system attempts to load the data. This page will automatically refresh once complete.';
-    document.getElementById("analysisInitiationForm").appendChild(message);
+    document.getElementById("populateDatabaseForm").appendChild(message);
     document.getElementById('startAnalysisBtn').setAttribute("disabled", "disabled");
 
     db.open(() => { 
@@ -120,6 +127,18 @@ class App extends Component {
       }
       checkForCompletion();
     });
+  }
+
+  handleGradeCheck(event) {
+    event.preventDefault();
+    db.checkGrades((err, problemGrades) => {
+      if (err) {
+        throw err
+      }
+      const message = document.createElement("div");
+      message.innerText = `There are ${problemGrades.length} students in grades outside the 9 through 12 requirement.`
+      document.getElementById("gradeCheckForm").appendChild(message);
+    })
   }
 
   render() {
