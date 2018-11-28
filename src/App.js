@@ -13,6 +13,7 @@ class App extends Component {
     this.handleFileSelection = this.handleFileSelection.bind(this);
     this.populateDatabase = this.populateDatabase.bind(this);
     this.handleGradeCheck = this.handleGradeCheck.bind(this);
+    this.handleCreditCheck = this.handleCreditCheck.bind(this);
     this.studentData = null;
     this.coursesData = null;
     this.courseRequestData = null;
@@ -51,6 +52,22 @@ class App extends Component {
           <form id="gradeCheckForm" onSubmit={this.handleGradeCheck}>
             Students must be between grades 9 and 12:
             <button type="submit" id="gradeCheckBtn">Check Grade</button>
+          </form>
+          <form id="creditCheckForm" onSubmit={this.handleCreditCheck}>
+            Students must be signed up for a mimumum of 12 and maximum of 24 credits:
+            <button type="submit" id="creditCheckBtn">Check Credits</button>
+          </form>
+          <form id="subjectCheckForm">
+            Students must have a History, English, Science, and Math course based on the course’s subject area:
+            <button type="submit" id="subjectCheckBtn">Check Subjects</button>
+          </form>
+          <form id="advisoryCheckForm">
+            Students must be enrolled in an advisory course:
+            <button type="submit" id="advisoryCheckBtn">Check Advisory</button>
+          </form>
+          <form id="apCheckForm">
+            Only students in grades 11 and 12 are eligible for AP courses: 
+            <button type="submit" id="apCheckBtn">Check AP</button>
           </form>
         </div>
       )
@@ -103,7 +120,7 @@ class App extends Component {
     db.open(() => { 
       let studentDataPopulated = false; 
       let coursesDataPopulated = false;
-      let courseRequirementsDataPopulated = false;
+      let courseRequestsDataPopulated = false;
       db.populateStores(this.studentData, this.coursesData, this.courseRequestData, (err, data) => {
         if (err) {
           throw err;
@@ -112,12 +129,12 @@ class App extends Component {
           studentDataPopulated = true;
         } else if (data === 'courses') {
           coursesDataPopulated = true;
-        } else if (data === 'courseRequirements') {
-          courseRequirementsDataPopulated = true;
+        } else if (data === 'courseRequests') {
+          courseRequestsDataPopulated = true;
         }
       })
       const checkForCompletion = () => {
-        if (studentDataPopulated === true && coursesDataPopulated === true && courseRequirementsDataPopulated === true) {
+        if (studentDataPopulated === true && coursesDataPopulated === true && courseRequestsDataPopulated === true) {
           this.setState({
             currentPhase: 'database populated'
           })
@@ -128,17 +145,49 @@ class App extends Component {
       checkForCompletion();
     });
   }
-
+  
+  // Runs a check to see if all student grades are between 9 and 12. If not, an object containing the 
+  // problematic students is returned and reported in a new element. 
   handleGradeCheck(event) {
     event.preventDefault();
+    document.getElementById('gradeCheckBtn').setAttribute("disabled", "disabled");
     db.checkGrades((err, problemGrades) => {
-      if (err) {
+      if ( err ) {
         throw err
       }
       const message = document.createElement("div");
       message.innerText = `There are ${problemGrades.length} students in grades outside the 9 through 12 requirement.`
       document.getElementById("gradeCheckForm").appendChild(message);
     })
+  }
+
+  // Runs a check to see which students do not have credit counts between 12 and 24
+  // Routinely checks for updates made by async operations and will
+  // load error information into new html element. 
+  handleCreditCheck(event) {
+    event.preventDefault();
+    document.getElementById('creditCheckBtn').setAttribute("disabled", "disabled");
+    let problemStudents = [];
+    let counter = 0;
+    db.checkCredits((err, data) => {
+      if ( err ) {
+        throw err;
+      }
+      problemStudents.push(data);
+      if (problemStudents.length === 1) {
+        checkForUpdates();
+      }
+    })
+    const checkForUpdates = () => {
+      if ( problemStudents.length > counter ) {
+        counter = problemStudents.length;
+        setTimeout(checkForUpdates, 2000);
+      } else {
+        const message = document.createElement("div");
+        message.innerText = `There are ${problemStudents.length} students with class credit issues.`
+        document.getElementById("creditCheckForm").appendChild(message);       
+      }   
+    }
   }
 
   render() {

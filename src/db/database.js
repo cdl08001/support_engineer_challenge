@@ -27,7 +27,7 @@ const studentCourseDatabase = (() => {
       // Create a new store to hold the students, courses, and course requirements data
       const studentsStore = db.createObjectStore("students", { keyPath: "student_id" });
       const coursesStore = db.createObjectStore("courses", { keyPath: "course_code" });
-      const courseRequirementsStore = db.createObjectStore("courseRequirements", { autoIncrement: true });
+      const courseRequestsStore = db.createObjectStore("courseRequests", { autoIncrement: true });
 
       // Create indexes for each store. Assume there are duplicates
       studentsStore.createIndex("student_id", "student_id", { unique: false });      
@@ -36,8 +36,8 @@ const studentCourseDatabase = (() => {
       coursesStore.createIndex("subject_area", "subject_area", { unqiue: false });
       coursesStore.createIndex("credits_offered", "credits_offered", { unqiue: false });
       coursesStore.createIndex("is_ap", "is_ap", { unqiue: false });
-      courseRequirementsStore.createIndex("student_id", "student_id", { unique: false });
-      courseRequirementsStore.createIndex("course_code", "course_code", { unique: false });
+      courseRequestsStore.createIndex("student_id", "student_id", { unique: false });
+      courseRequestsStore.createIndex("course_code", "course_code", { unique: false });
     };
 
     // Will be triggered when onupgradeneeded exits succesfully, 
@@ -46,16 +46,16 @@ const studentCourseDatabase = (() => {
       db = event.target.result;
 
       // Clear the contents of each store prior to invoking callback
-      const transaction = db.transaction(["students", "courses", "courseRequirements"], "readwrite");
+      const transaction = db.transaction(["students", "courses", "courseRequests"], "readwrite");
       const studentsStore = transaction.objectStore("students");
       const studentsStoreRequest = studentsStore.clear();
       studentsStoreRequest.onsuccess = (event) => {
         const coursesStore = transaction.objectStore("courses");
         const coursesStoreRequest = coursesStore.clear();
         coursesStoreRequest.onsuccess = (event) => {
-          const courseRequirementsStore = transaction.objectStore("courseRequirements");
-          const courseRequirementsRequest = courseRequirementsStore.clear();
-          courseRequirementsRequest.onsuccess = (event) => {
+          const courseRequestsStore = transaction.objectStore("courseRequests");
+          const courseRequestsRequest = courseRequestsStore.clear();
+          courseRequestsRequest.onsuccess = (event) => {
             cb();
           };
         };
@@ -65,10 +65,10 @@ const studentCourseDatabase = (() => {
   }
 
   database.populateStores = (studentData, coursesData, courseRequestsData, cb) => {
-    const transaction = db.transaction(["students", "courses", "courseRequirements"], "readwrite");
+    const transaction = db.transaction(["students", "courses", "courseRequests"], "readwrite");
     const studentsStore = transaction.objectStore("students");
     const coursesStore = transaction.objectStore("courses");
-    const courseRequirementsStore = transaction.objectStore("courseRequirements")
+    const courseRequestsStore = transaction.objectStore("courseRequests");
 
     studentData.forEach((student, index) => {
       const request = studentsStore.add(student);
@@ -95,10 +95,10 @@ const studentCourseDatabase = (() => {
     });
 
     courseRequestsData.forEach((courseRequest, index) => {
-      const request = courseRequirementsStore.add(courseRequest);
+      const request = courseRequestsStore.add(courseRequest);
       request.onsuccess = (event) => {
         if (index === courseRequestsData.length - 1) {
-          cb(null, 'courseRequirements')
+          cb(null, 'courseRequests')
         }
       }
       request.onerror = () => {
@@ -131,6 +131,99 @@ const studentCourseDatabase = (() => {
 
     getCursorRequest.onerror = () => {
       cb(getCursorRequest.error)
+    }
+  }
+
+  // Courses Store Query: provided a course code (string), return the associated number of credits (integer)
+  database.calculateCourseCredits = (course_code, cb) => {
+    const transaction = db.transaction(["courses"], "readonly");
+    const coursesStore = transaction.objectStore("courses");
+    const courseCodeIndex = coursesStore.index("course_code");
+    const courseCodeIndexRequest = courseCodeIndex.get(course_code);
+
+    courseCodeIndexRequest.onsuccess = (event) => {
+      const credits = parseInt(courseCodeIndexRequest.result.credits_offered);
+      cb(null, credits);
+    }
+
+    courseCodeIndexRequest.onerror = () => {
+      cb(courseCodeIndexRequest.error);
+    }
+
+  }
+
+  // Course_Requests Store Query: provided with a students id (string), return all courses a student is enrolled for (array)
+  database.getStudentCourses = (student_id, cb) => {
+    const transaction = db.transaction(["courseRequests"], "readonly");
+    const courseRequestsStore = transaction.objectStore("courseRequests");
+    const studentIdIndex = courseRequestsStore.index("student_id");
+    const studentIdIndexRequest = studentIdIndex.getAll(student_id);
+
+    studentIdIndexRequest.onsuccess = (event) => {
+      let course_codes = [];
+      studentIdIndexRequest.result.forEach((result) => {
+        course_codes.push(result.course_code);
+      })
+      cb(null, course_codes);
+    }
+
+    studentIdIndexRequest.onerror = () => {
+      cb(studentIdIndexRequest.error);
+    }
+  }
+
+  // Students Store Query: iterate through all students and return the total credits for each
+  database.checkCredits = (cb) => {
+    const transaction = db.transaction(["students"], "readonly");
+    const studentsStore = transaction.objectStore("students");
+    const getCursorRequest = studentsStore.openCursor();
+
+    getCursorRequest.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        let studentId = cursor.value.student_id;
+        // Get course list array corresponding to current student
+        database.getStudentCourses(studentId, (err, course_codes) => {
+          if (err) {
+            throw err;
+          }
+          // If the current student does not have any course requests, create error data,
+          // and invoke callback
+          if(course_codes.length === 0) {
+            const issueStudent = {
+              studentId: studentId,
+              error: `Student is not present within course_requests.csv`,
+            };
+            cb(null, issueStudent)
+          } else {
+            // If the current student has made a course request, iterate over the students
+            // course list in order to tally total number of course credits. If the total number
+            // of credits fall outside the 12 to 24 range, create error data and invoke callback
+            let totalCredits = 0;
+            course_codes.forEach((code, index) => {
+              database.calculateCourseCredits(code, (err, creditCount) => {
+                if (err) {
+                  throw err;
+                }
+                totalCredits += creditCount
+                if (index === course_codes.length - 1) {
+                  if (totalCredits < 12 || totalCredits > 24) {
+                    const issueStudent = {
+                      studentId: studentId,
+                      error: `Credit Total Outside Range: ${totalCredits}`,
+                    }
+                    cb(null, issueStudent)                
+                  }
+                }
+              })
+            })
+          }
+        })
+        cursor.continue();
+      }
+    }
+    getCursorRequest.onerror = () => {
+      cb(getCursorRequest.error);
     }
   }
 
