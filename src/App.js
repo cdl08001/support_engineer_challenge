@@ -1,14 +1,16 @@
+/* eslint-env browser */
+/* eslint class-methods-use-this: ["error", { "exceptMethods": ["handleGradeCheck", "handleCreditCheck", "handleSubjectCheck", "handleAdvisoryCheck", "handleAPCheck"] }] */
 import React, { Component } from 'react';
 import './App.css';
 import csv from 'csvtojson';
-import db from './db/database.js'
+import db from './db/database';
 
 class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
       currentPhase: 'waiting for data',
-    }
+    };
     this.updateView = this.updateView.bind(this);
     this.handleFileSelection = this.handleFileSelection.bind(this);
     this.populateDatabase = this.populateDatabase.bind(this);
@@ -25,31 +27,34 @@ class App extends Component {
   // Method that is called each time the App component is rendered
   // Adjusts html elements depending on currentPhase state
   updateView() {
-    if (this.state.currentPhase === 'waiting for data') {
+    const { currentPhase } = this.state;
+    if (currentPhase === 'waiting for data') {
       return (
         <form id="fileSelectionForm" onSubmit={this.handleFileSelection}>
           <div id="studentInput" className="dataInputSelector">
             Students.csv:
-            <input type="file" accept=".csv" required/>
+            <input type="file" accept=".csv" required />
           </div>
           <div id="coursesInput" className="dataInputSelector">
             Courses.csv:
-            <input type="file" accept=".csv" required/>
+            <input type="file" accept=".csv" required />
           </div>
           <div id="courseRequestInput" className="dataInputSelector">
             Course_Requests.csv:
-            <input type="file" accept=".csv" required/>
-          </div> 
+            <input type="file" accept=".csv" required />
+          </div>
           <button type="submit" id="fileSelectorBtn">Submit</button>
         </form>
-      )
-    } else if (this.state.currentPhase === 'data upload complete') {
+      );
+    }
+    if (currentPhase === 'data upload complete') {
       return (
         <form id="populateDatabaseForm" onSubmit={this.populateDatabase}>
           <button type="submit" id="startAnalysisBtn">Populate Database</button>
         </form>
-      )
-    } else if (this.state.currentPhase === 'database populated') {
+      );
+    }
+    if (currentPhase === 'database populated') {
       return (
         <div id="dataAnalysis">
           <form id="gradeCheckForm" onSubmit={this.handleGradeCheck}>
@@ -69,17 +74,17 @@ class App extends Component {
             <button type="submit" id="advisoryCheckBtn">Check Advisory</button>
           </form>
           <form id="apCheckForm" onSubmit={this.handleAPCheck}>
-            Only students in grades 11 and 12 are eligible for AP courses: 
+            Only students in grades 11 and 12 are eligible for AP courses:
             <button type="submit" id="apCheckBtn">Check AP</button>
           </form>
         </div>
-      )
+      );
     }
   }
 
   // Reads the contents of selected CSV files on submit, converts
-  // into CSV format, and saves as local class properties. 
-  // Updates state on completion. 
+  // into CSV format, and saves as local class properties.
+  // Updates state on completion.
   handleFileSelection(event) {
     event.preventDefault();
     const studentDataFile = event.target[0].files[0];
@@ -89,39 +94,39 @@ class App extends Component {
 
     dataFiles.forEach((file, index) => {
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = () => {
         csv()
           .fromString(event.target.result)
           .then((data) => {
-            if(index === 0) {
+            if (index === 0) {
               this.studentData = data;
             } else if (index === 1) {
               this.coursesData = data;
             } else if (index === 2) {
               this.courseRequestData = data;
               this.setState({
-                currentPhase: 'data upload complete'
-              })
+                currentPhase: 'data upload complete',
+              });
             }
-          })
-      }
+          });
+      };
       reader.readAsText(dataFiles[index]);
-    })
+    });
   }
 
   // Open the database connection. Opening will clear the current local stores and
-  // attempt to populate with the provided JSON data. Additioanlly, disable the submission 
+  // attempt to populate with the provided JSON data. Additioanlly, disable the submission
   // button and display a notification message once clicked. Continuously check for completion
   // or error once population is submitted.
   populateDatabase(event) {
     event.preventDefault();
-    const message = document.createElement("div");
+    const message = document.createElement('div');
     message.innerText = 'Please wait while the system attempts to load the data. This page will automatically refresh once complete.';
-    document.getElementById("populateDatabaseForm").appendChild(message);
-    document.getElementById('startAnalysisBtn').setAttribute("disabled", "disabled");
+    document.getElementById('populateDatabaseForm').appendChild(message);
+    document.getElementById('startAnalysisBtn').setAttribute('disabled', 'disabled');
 
-    db.open(() => { 
-      let studentDataPopulated = false; 
+    db.open(() => {
+      let studentDataPopulated = false;
       let coursesDataPopulated = false;
       let courseRequestsDataPopulated = false;
       db.populateStores(this.studentData, this.coursesData, this.courseRequestData, (err, data) => {
@@ -135,140 +140,148 @@ class App extends Component {
         } else if (data === 'courseRequests') {
           courseRequestsDataPopulated = true;
         }
-      })
+      });
       const checkForCompletion = () => {
         if (studentDataPopulated === true && coursesDataPopulated === true && courseRequestsDataPopulated === true) {
           this.setState({
-            currentPhase: 'database populated'
-          })
+            currentPhase: 'database populated',
+          });
         } else {
           setTimeout(checkForCompletion, 1000);
         }
-      }
+      };
       checkForCompletion();
     });
   }
-  
-  // Runs a check to see if all student grades are between 9 and 12. If not, an object containing the 
-  // problematic students is returned and reported in a new element. 
+
+  // Runs a check to see if all student grades are between 9 and 12. If not, an object containing the
+  // problematic students is returned and reported in a new element.
   handleGradeCheck(event) {
     event.preventDefault();
-    document.getElementById('gradeCheckBtn').setAttribute("disabled", "disabled");
+    document.getElementById('gradeCheckBtn').setAttribute('disabled', 'disabled');
     db.checkGrades((err, problemGrades) => {
-      if ( err ) {
-        throw err
+      if (err) {
+        throw err;
       }
-      const message = document.createElement("div");
-      message.innerText = `There are ${problemGrades.length} students in grades outside the 9 through 12 requirement.`
-      document.getElementById("gradeCheckForm").appendChild(message);
-    })
+      const message = document.createElement('div');
+      message.innerText = `There are ${problemGrades.length} students in grades outside the 9 through 12 requirement.`;
+      document.getElementById('gradeCheckForm').appendChild(message);
+    });
   }
 
   // Runs a check to see which students do not have credit counts between 12 and 24
   // Routinely checks for updates made by async operations and will
-  // load error information into new html element. 
+  // load error information into new html element.
   handleCreditCheck(event) {
     event.preventDefault();
-    document.getElementById('creditCheckBtn').setAttribute("disabled", "disabled");
-    let problemStudents = [];
+    document.getElementById('creditCheckBtn').setAttribute('disabled', 'disabled');
+    const problemStudents = [];
     let counter = 0;
+
+    const checkForUpdates = () => {
+      if (problemStudents.length > counter) {
+        counter = problemStudents.length;
+        setTimeout(checkForUpdates, 2000);
+      } else {
+        const message = document.createElement('div');
+        message.innerText = `There are ${problemStudents.length} students with class credit conflicts.`;
+        document.getElementById('creditCheckForm').appendChild(message);
+      }
+    };
+
     db.checkCredits((err, data) => {
-      if ( err ) {
+      if (err) {
         throw err;
       }
       problemStudents.push(data);
       if (problemStudents.length === 1) {
         checkForUpdates();
       }
-    })
-    const checkForUpdates = () => {
-      if ( problemStudents.length > counter ) {
-        counter = problemStudents.length;
-        setTimeout(checkForUpdates, 2000);
-      } else {
-        const message = document.createElement("div");
-        message.innerText = `There are ${problemStudents.length} students with class credit conflicts.`
-        document.getElementById("creditCheckForm").appendChild(message);       
-      }   
-    }
+    });
   }
 
   handleSubjectCheck(event) {
     event.preventDefault();
-    document.getElementById("subjectCheckBtn").setAttribute("disabled", "disabled");
-    let problemStudents = [];
+    document.getElementById('subjectCheckBtn').setAttribute('disabled', 'disabled');
+    const problemStudents = [];
     let counter = 0;
+
+    const checkForUpdates = () => {
+      if (problemStudents.length > counter) {
+        counter = problemStudents.length;
+        setTimeout(checkForUpdates, 2000);
+      } else {
+        const message = document.createElement('div');
+        message.innerText = `There are ${problemStudents.length} students with course subject conflicts.`;
+        document.getElementById('subjectCheckForm').appendChild(message);
+      }
+    };
+
     db.checkCourses((err, data) => {
       if (err) {
         throw err;
       }
       problemStudents.push(data);
-      if(problemStudents.length === 1) {
+      if (problemStudents.length === 1) {
         checkForUpdates();
       }
-    })
-    const checkForUpdates = () => {
-      if ( problemStudents.length > counter ) {
-        counter = problemStudents.length;
-        setTimeout(checkForUpdates, 2000);
-      } else {
-        const message = document.createElement("div");
-        message.innerText = `There are ${problemStudents.length} students with course subject conflicts.`
-        document.getElementById("subjectCheckForm").appendChild(message);       
-      }   
-    }
+    });
   }
 
   handleAdvisoryCheck(event) {
     event.preventDefault();
-    document.getElementById("advisoryCheckBtn").setAttribute("disabled", "disabled");
-    let problemStudents = [];
+    document.getElementById('advisoryCheckBtn').setAttribute('disabled', 'disabled');
+    const problemStudents = [];
     let counter = 0;
+
+    const checkForUpdates = () => {
+      if (problemStudents.length > counter) {
+        counter = problemStudents.length;
+        setTimeout(checkForUpdates, 2000);
+      } else {
+        const message = document.createElement('div');
+        message.innerText = `There are ${problemStudents.length} students with advisory course conflicts.`;
+        document.getElementById('advisoryCheckForm').appendChild(message);
+      }
+    };
+
     db.checkAdvisoryStatus((err, data) => {
       if (err) {
         throw err;
       }
       problemStudents.push(data);
-      if(problemStudents.length === 1) {
+      if (problemStudents.length === 1) {
         checkForUpdates();
       }
-    })
-    const checkForUpdates = () => {
-      if ( problemStudents.length > counter ) {
-        counter = problemStudents.length;
-        setTimeout(checkForUpdates, 2000);
-      } else {
-        const message = document.createElement("div");
-        message.innerText = `There are ${problemStudents.length} students with advisory course conflicts.`
-        document.getElementById("advisoryCheckForm").appendChild(message);       
-      }   
-    }
+    });
   }
 
   handleAPCheck(event) {
     event.preventDefault();
-    document.getElementById("apCheckBtn").setAttribute("disabled", "disabled");
-    let problemStudents = [];
+    document.getElementById('apCheckBtn').setAttribute('disabled', 'disabled');
+    const problemStudents = [];
     let counter = 0;
+
+    const checkForUpdates = () => {
+      if (problemStudents.length > counter) {
+        counter = problemStudents.length;
+        setTimeout(checkForUpdates, 2000);
+      } else {
+        const message = document.createElement('div');
+        message.innerText = `There are ${problemStudents.length} students with AP course conflicts.`;
+        document.getElementById('apCheckForm').appendChild(message);
+      }
+    };
+
     db.checkAP((err, data) => {
       if (err) {
         throw err;
       }
       problemStudents.push(data);
-      if(problemStudents.length === 1) {
+      if (problemStudents.length === 1) {
         checkForUpdates();
       }
-    })
-    const checkForUpdates = () => {
-      if ( problemStudents.length > counter ) {
-        counter = problemStudents.length;
-        setTimeout(checkForUpdates, 2000);
-      } else {
-        const message = document.createElement("div");
-        message.innerText = `There are ${problemStudents.length} students with AP course conflicts.`
-        document.getElementById("apCheckForm").appendChild(message);       
-      }   
-    }
+    });
   }
 
   render() {
@@ -278,7 +291,7 @@ class App extends Component {
           <header>Support Engineer Challenge</header>
         </div>
         <div id="body">
-        {this.updateView()}
+          {this.updateView()}
         </div>
       </div>
     );
