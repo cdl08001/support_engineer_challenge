@@ -44,6 +44,10 @@ class App extends Component {
           <button type="submit" id="startAnalysisBtn">Populate Database</button>
         </form>
       )
+    } else if (this.state.currentPhase === 'database populated') {
+      return (
+        <div>SUCCESS</div>
+      )
     }
   }
 
@@ -88,10 +92,33 @@ class App extends Component {
     message.innerText = 'Please wait while the system attempts to load the data. This page will automatically refresh once complete.';
     document.getElementById("analysisInitiationForm").appendChild(message);
     document.getElementById('startAnalysisBtn').setAttribute("disabled", "disabled");
+
     db.open(() => { 
-      db.populateStores(this.studentData, this.coursesData, this.courseRequestData, (test) => {
-        console.log(test)
+      let studentDataPopulated = false; 
+      let coursesDataPopulated = false;
+      let courseRequirementsDataPopulated = false;
+      db.populateStores(this.studentData, this.coursesData, this.courseRequestData, (err, data) => {
+        if (err) {
+          throw err;
+        }
+        if (data === 'students') {
+          studentDataPopulated = true;
+        } else if (data === 'courses') {
+          coursesDataPopulated = true;
+        } else if (data === 'courseRequirements') {
+          courseRequirementsDataPopulated = true;
+        }
       })
+      const checkForCompletion = () => {
+        if (studentDataPopulated === true && coursesDataPopulated === true && courseRequirementsDataPopulated === true) {
+          this.setState({
+            currentPhase: 'database populated'
+          })
+        } else {
+          setTimeout(checkForCompletion, 1000);
+        }
+      }
+      checkForCompletion();
     });
   }
 

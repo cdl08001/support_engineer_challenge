@@ -70,33 +70,39 @@ const studentCourseDatabase = (() => {
     const coursesStore = transaction.objectStore("courses");
     const courseRequirementsStore = transaction.objectStore("courseRequirements")
 
-    studentData.forEach((student) => {
+    studentData.forEach((student, index) => {
       const request = studentsStore.add(student);
       request.onsuccess = (event) => {
-        cb('Student Success');
+        if (index === studentData.length - 1) {
+          cb(null, 'students');
+        }
       };
       request.onerror = () => {
-        console.log(request.error);
+        cb(request.error);
       }
     });
 
-    coursesData.forEach((course) => {
+    coursesData.forEach((course, index) => {
       const request = coursesStore.add(course);
       request.onsuccess = (event) => {
-        cb('Course Success')
+        if (index === coursesData.length - 1) {
+          cb(null, 'courses');
+        }
       }
       request.onerror = () => {
-        console.log(request.error);
+        cb(request.error);
       }
     });
 
-    courseRequestsData.forEach((courseRequest) => {
+    courseRequestsData.forEach((courseRequest, index) => {
       const request = courseRequirementsStore.add(courseRequest);
       request.onsuccess = (event) => {
-        cb('Course Request Success')
+        if (index === courseRequestsData.length - 1) {
+          cb(null, 'courseRequirements')
+        }
       }
       request.onerror = () => {
-        console.log(request.error);
+        cb(request.error);
       }
     })
 
