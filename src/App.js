@@ -15,6 +15,7 @@ class App extends Component {
     this.handleGradeCheck = this.handleGradeCheck.bind(this);
     this.handleCreditCheck = this.handleCreditCheck.bind(this);
     this.handleSubjectCheck = this.handleSubjectCheck.bind(this);
+    this.handleAdvisoryCheck = this.handleAdvisoryCheck.bind(this);
     this.studentData = null;
     this.coursesData = null;
     this.courseRequestData = null;
@@ -62,7 +63,7 @@ class App extends Component {
             Students must have a History, English, Science, and Math course based on the course’s subject area:
             <button type="submit" id="subjectCheckBtn">Check Subjects</button>
           </form>
-          <form id="advisoryCheckForm">
+          <form id="advisoryCheckForm" onSubmit={this.handleAdvisoryCheck}>
             Students must be enrolled in an advisory course:
             <button type="submit" id="advisoryCheckBtn">Check Advisory</button>
           </form>
@@ -213,6 +214,33 @@ class App extends Component {
         const message = document.createElement("div");
         message.innerText = `There are ${problemStudents.length} students with course subject conflicts.`
         document.getElementById("subjectCheckForm").appendChild(message);       
+      }   
+    }
+  }
+
+  handleAdvisoryCheck(event) {
+    event.preventDefault();
+    document.getElementById("advisoryCheckBtn").setAttribute("disabled", "disabled");
+    let problemStudents = [];
+    let counter = 0;
+    db.checkAdvisoryStatus((err, data) => {
+      console.log(data)
+      if (err) {
+        throw err;
+      }
+      problemStudents.push(data);
+      if(problemStudents.length === 1) {
+        checkForUpdates();
+      }
+    })
+    const checkForUpdates = () => {
+      if ( problemStudents.length > counter ) {
+        counter = problemStudents.length;
+        setTimeout(checkForUpdates, 2000);
+      } else {
+        const message = document.createElement("div");
+        message.innerText = `There are ${problemStudents.length} students with advisory course conflicts.`
+        document.getElementById("advisoryCheckForm").appendChild(message);       
       }   
     }
   }

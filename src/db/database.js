@@ -266,7 +266,7 @@ const studentCourseDatabase = (() => {
           if (err) {
             throw err;
           }
-          if(course_codes.length === 0) {
+          if (course_codes.length === 0) {
             const issueStudent = {
               studentId: studentId,
               error: `Student is not present within course requests file.`,
@@ -300,6 +300,44 @@ const studentCourseDatabase = (() => {
                 cb(null, issueStudent)         
               }
             })
+          }
+        })
+        cursor.continue();
+      }
+    }
+
+    getCursorRequest.onerror = () => {
+      cb(getCursorRequest.error);
+    }
+  }
+
+  database.checkAdvisoryStatus = (cb) => {
+    const transaction = db.transaction(["students"], "readonly");
+    const studentsStore = transaction.objectStore("students");
+    const getCursorRequest = studentsStore.openCursor();
+
+    getCursorRequest.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        let studentId = cursor.value.student_id;
+        database.getStudentCourses(studentId, (err, course_codes) => {
+          if (err) {
+            throw err
+          }
+          if (course_codes.length === 0) {
+            const issueStudent = {
+              studentId: studentId,
+              error: `Student is not present within course requests file.`,
+            }
+            cb(null, issueStudent)
+          } else {
+            if (!course_codes.includes('8027_2')) {
+              const issueStudent = {
+                studentId: studentId,
+                error: 'Student is missing the required "8027_2" advisory course.',
+              }
+              cb(null, issueStudent)
+            }
           }
         })
         cursor.continue();
