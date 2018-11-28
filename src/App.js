@@ -16,6 +16,7 @@ class App extends Component {
     this.handleCreditCheck = this.handleCreditCheck.bind(this);
     this.handleSubjectCheck = this.handleSubjectCheck.bind(this);
     this.handleAdvisoryCheck = this.handleAdvisoryCheck.bind(this);
+    this.handleAPCheck = this.handleAPCheck.bind(this);
     this.studentData = null;
     this.coursesData = null;
     this.courseRequestData = null;
@@ -67,7 +68,7 @@ class App extends Component {
             Students must be enrolled in an advisory course:
             <button type="submit" id="advisoryCheckBtn">Check Advisory</button>
           </form>
-          <form id="apCheckForm">
+          <form id="apCheckForm" onSubmit={this.handleAPCheck}>
             Only students in grades 11 and 12 are eligible for AP courses: 
             <button type="submit" id="apCheckBtn">Check AP</button>
           </form>
@@ -224,7 +225,6 @@ class App extends Component {
     let problemStudents = [];
     let counter = 0;
     db.checkAdvisoryStatus((err, data) => {
-      console.log(data)
       if (err) {
         throw err;
       }
@@ -241,6 +241,32 @@ class App extends Component {
         const message = document.createElement("div");
         message.innerText = `There are ${problemStudents.length} students with advisory course conflicts.`
         document.getElementById("advisoryCheckForm").appendChild(message);       
+      }   
+    }
+  }
+
+  handleAPCheck(event) {
+    event.preventDefault();
+    document.getElementById("apCheckBtn").setAttribute("disabled", "disabled");
+    let problemStudents = [];
+    let counter = 0;
+    db.checkAP((err, data) => {
+      if (err) {
+        throw err;
+      }
+      problemStudents.push(data);
+      if(problemStudents.length === 1) {
+        checkForUpdates();
+      }
+    })
+    const checkForUpdates = () => {
+      if ( problemStudents.length > counter ) {
+        counter = problemStudents.length;
+        setTimeout(checkForUpdates, 2000);
+      } else {
+        const message = document.createElement("div");
+        message.innerText = `There are ${problemStudents.length} students with AP course conflicts.`
+        document.getElementById("apCheckForm").appendChild(message);       
       }   
     }
   }

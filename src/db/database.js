@@ -194,6 +194,27 @@ const studentCourseDatabase = (() => {
     })
   }
 
+  // Courses Store query: Return the course codes for all courses with an IS_AP value of true
+  database.getAPCourses = (cb) => {
+    const transaction = db.transaction(["courses"], "readonly");
+    const coursesStore = transaction.objectStore("courses");
+    const isAPIndex = coursesStore.index("is_ap");
+    const isAPIndexRequest = isAPIndex.getAll("TRUE");
+    const apCourseList = [];
+    
+    isAPIndexRequest.onsuccess = (event) => {
+      isAPIndexRequest.result.forEach((course) => {
+        apCourseList.push(course.course_code);
+      })
+      cb(null, apCourseList);
+    }
+
+    isAPIndexRequest.error = () => {
+      cb(isAPIndexRequest.error);
+    }
+
+  }
+
   // Students Store Query: iterate through all students and return those that have credit
   // conflicts (Outside of the 12-24 range) 
   database.checkCredits = (cb) => {
@@ -347,6 +368,57 @@ const studentCourseDatabase = (() => {
     getCursorRequest.onerror = () => {
       cb(getCursorRequest.error);
     }
+  }
+
+  database.checkAP = (cb) => {
+    database.getAPCourses((err, data) => {
+      const transaction = db.transaction(["students"], "readonly");
+      const studentsStore = transaction.objectStore("students");
+      const getCursorRequest = studentsStore.openCursor();
+      if (err) {
+        throw err
+      }
+      const apCourseList = data;
+      getCursorRequest.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          if (parseInt(cursor.value.grade_level) !== 11 && 
+              parseInt(cursor.value.grade_level) !== 12) {
+            let student_id = cursor.value.student_id;
+            database.getStudentCourses(student_id, (err, course_codes) => {
+              if (course_codes.length === 0) {
+                const issueStudent = {
+                  studentId: student_id,
+                  error: `Student is not present within course requests file.`,
+                }
+                cb(null, issueStudent)
+              } else {
+                const problemCourses = [];
+                course_codes.forEach((code, index) => {
+                  if (apCourseList.includes(code)) {
+                    problemCourses.push(code);
+                  }
+                  if ((index === course_codes.length - 1) && (problemCourses.length !== 0)) {
+                    const issueStudent = {
+                      studentId: student_id,
+                      error: 'Student is not in grade 11 or 12 but is enrolled in AP course',
+                      APCourses: problemCourses,
+                    };
+                    cb(null, issueStudent)
+                  }
+                })
+              }
+            })
+            cursor.continue();
+          } else {
+            cursor.continue();
+          }
+        }
+      }
+      getCursorRequest.onerror = (event) => {
+        cb(getCursorRequest.error);
+      }
+    })
   }
 
   return database;
