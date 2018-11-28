@@ -94,9 +94,9 @@ class App extends Component {
 
     dataFiles.forEach((file, index) => {
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = (e) => {
         csv()
-          .fromString(event.target.result)
+          .fromString(e.target.result)
           .then((data) => {
             if (index === 0) {
               this.studentData = data;
