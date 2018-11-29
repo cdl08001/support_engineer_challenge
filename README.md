@@ -47,6 +47,7 @@ Once the application has been launched, the first step is to select three **csv*
   - course_code,course_name,subject_area,credits_offered,is_ap
 - Course Requests Data 
   - student_id,course_code
+  
 *Note that the application will throw an error if the above structure is not followed*
 
 Once the files have been selected, click "Submit"
