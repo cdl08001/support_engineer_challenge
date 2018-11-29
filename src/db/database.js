@@ -115,7 +115,12 @@ const studentCourseDatabase = (() => {
       if (cursor) {
         const grade = parseInt(cursor.value.grade_level, 10);
         if (grade < 9 || grade > 12 || grade === undefined || grade === '' || grade === null) {
-          problemGrades.push(cursor.value);
+          const issueStudent = {
+            student_id: cursor.value.student_id,
+            student_grade: cursor.value.grade_level,
+            error: 'Student is outside of grade range of 9-12.',
+          };
+          problemGrades.push(issueStudent);
           cursor.continue();
         } else {
           cursor.continue();
@@ -231,7 +236,8 @@ const studentCourseDatabase = (() => {
           // and invoke callback
           if (courseCodes.length === 0) {
             const issueStudent = {
-              studentId,
+              student_Id: studentId,
+              totalCredits: 'N/A',
               error: 'Student is not present within course requests file.',
             };
             cb(null, issueStudent);
@@ -249,10 +255,11 @@ const studentCourseDatabase = (() => {
                 if (index === courseCodes.length - 1) {
                   if (totalCredits < 12 || totalCredits > 24) {
                     const issueStudent = {
-                      studentId,
-                      error: `Credit Total Outside Range: ${totalCredits}`,
+                      student_Id: studentId,
+                      totalCredits,
+                      error: 'Credit Total Outside Range of 12 to 24.',
                     };
-                    cb(null, issueStudent);       
+                    cb(null, issueStudent); 
                   }
                 }
               });
@@ -285,35 +292,45 @@ const studentCourseDatabase = (() => {
           }
           if (courseCodes.length === 0) {
             const issueStudent = {
-              studentId,
+              student_id: studentId,
               error: 'Student is not present within course requests file.',
-              missingSubjects: ['HISTORY', 'ENGLISH', 'SCIENCE', 'MATH'],
+              noHistory: true,
+              noEnglish: true,
+              noScience: true,
+              noMath: true,
             };
             cb(null, issueStudent);
           } else {
-            const missingSubjects = [];
             database.getCourseSubjects(courseCodes, (err, subjects) => {
+              let missingCourse = false;
+              const issueStudent = {
+                student_id: studentId,
+                error: 'Student is missing a required subject.',
+                noHistory: false,
+                noEnglish: false,
+                noScience: false,
+                noMath: false,
+              };
               if (err) {
                 throw err;
               }
               if (!subjects.some(subject => subject.includes('HISTORY'))) {
-                missingSubjects.push('HISTORY');
+                missingCourse = true;
+                issueStudent.noHistory = true;
               }
               if (!subjects.some(subject => subject.includes('ENGLISH'))) {
-                missingSubjects.push('ENGLISH');
+                missingCourse = true;
+                issueStudent.noEnglish = true;
               }
               if (!subjects.some(subject => subject.includes('SCIENCE'))) {
-                missingSubjects.push('SCIENCE');
+                missingCourse = true;
+                issueStudent.noScience = true;
               }
               if (!subjects.some(subject => subject.includes('MATH'))) {
-                missingSubjects.push('MATH');
+                missingCourse = true;
+                issueStudent.noMath = true;
               }
-              if (missingSubjects.length > 0) {
-                const issueStudent = {
-                  studentId,
-                  error: 'Student is missing a required subject',
-                  missingSubjects,
-                };
+              if (missingCourse) {
                 cb(null, issueStudent);
               }
             });
@@ -343,14 +360,14 @@ const studentCourseDatabase = (() => {
           }
           if (courseCodes.length === 0) {
             const issueStudent = {
-              studentId,
+              student_id: studentId,
               error: 'Student is not present within course requests file.',
             };
             cb(null, issueStudent);
           } else if (!courseCodes.includes('8027_2')) {
             const issueStudent = {
-              studentId,
-              error: 'Student is missing the required "8027_2" advisory course.',
+              student_id: studentId,
+              error: 'Student is missing the required 8027_2 advisory course.',
             };
             cb(null, issueStudent);
           }
@@ -394,9 +411,8 @@ const studentCourseDatabase = (() => {
                   }
                   if ((index === courseCodes.length - 1) && (problemCourses.length !== 0)) {
                     const issueStudent = {
-                      studentId,
-                      error: 'Student is not in grade 11 or 12 but is enrolled in AP course',
-                      APCourses: problemCourses,
+                      student_id: studentId,
+                      error: 'Student is not in grade 11 or 12 and is enrolled in AP course',
                     };
                     cb(null, issueStudent);
                   }

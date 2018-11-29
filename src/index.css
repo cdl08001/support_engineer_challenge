@@ -1,3 +1,7 @@
+html {
+  background-color: rgba(0, 123, 255, 0.5);
+}
+
 #rootContents, #root, body, html, title {
   height: 100%;
 }
@@ -17,11 +21,20 @@
 /* ------ Body ------ */
 #body {
   height: 100%;
-  background-color: rgba(0, 123, 255, 0.5);
   text-align: center;
 }
 
 /* ------ File Selector ------ */
 .dataInputSelector {
   padding: 10px;
+}
+
+/* ------ Analysis Selectors ------ */
+.dataAnalysisSelector {
+  margin: 20px;
+}
+
+/* ------ Save File Buttons ------ */
+.saveButtons {
+  display: none;
 }
