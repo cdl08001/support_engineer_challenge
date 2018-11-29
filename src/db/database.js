@@ -399,7 +399,7 @@ const studentCourseDatabase = (() => {
             database.getStudentCourses(studentId, (err, courseCodes) => {
               if (courseCodes.length === 0) {
                 const issueStudent = {
-                  studentId,
+                  student_id: studentId,
                   error: 'Student is not present within course requests file.',
                 };
                 cb(null, issueStudent);
