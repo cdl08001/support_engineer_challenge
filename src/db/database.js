@@ -61,6 +61,8 @@ const studentCourseDatabase = (() => {
     };
   };
 
+  // Populates database stores with students, courses, and courseRequestData.
+  // Iterates over each JSON object and pushes each object into associated store. 
   database.populateStores = (studentData, coursesData, courseRequestsData, cb) => {
     const transaction = db.transaction(['students', 'courses', 'courseRequests'], 'readwrite');
     const studentsStore = transaction.objectStore('students');
@@ -104,6 +106,11 @@ const studentCourseDatabase = (() => {
     });
   };
 
+  // Students Store Query: return all students (array) that do not follow grade requirements
+  // Iterates over the 'students' data store and check for 
+  // students with grades that are either missing, less than 9,
+  // or greater than 12. Creates objects for each record that follows that criteria (conflict)
+  // and sends it to callback
   database.checkGrades = (cb) => {
     const transaction = db.transaction(['students'], 'readonly');
     const studentsStore = transaction.objectStore('students');
@@ -196,7 +203,7 @@ const studentCourseDatabase = (() => {
     });
   };
 
-  // Courses Store query: Return the course codes for all courses with an IS_AP value of true
+  // Courses Store query: Return the course codes for all courses with an IS_AP value of true (array)
   database.getAPCourses = (cb) => {
     const transaction = db.transaction(['courses'], 'readonly');
     const coursesStore = transaction.objectStore('courses');
@@ -232,7 +239,7 @@ const studentCourseDatabase = (() => {
           if (err) {
             throw err;
           }
-          // If the current student does not have any course requests, create error data,
+          // If the current student does not have any course requests, create student data,
           // and invoke callback
           if (courseCodes.length === 0) {
             const issueStudent = {
@@ -244,7 +251,7 @@ const studentCourseDatabase = (() => {
           } else {
             // If the current student has made a course request, iterate over the students
             // course list in order to tally total number of course credits. If the total number
-            // of credits fall outside the 12 to 24 range, create error data and invoke callback
+            // of credits fall outside the 12 to 24 range, create student data and invoke callback
             let totalCredits = 0;
             courseCodes.forEach((code, index) => {
               database.calculateCourseCredits(code, (err, creditCount) => {
@@ -290,6 +297,8 @@ const studentCourseDatabase = (() => {
           if (err) {
             throw err;
           }
+          // If the current student does not have any course requests, create student data,
+          // and invoke callback
           if (courseCodes.length === 0) {
             const issueStudent = {
               student_id: studentId,
@@ -301,6 +310,9 @@ const studentCourseDatabase = (() => {
             };
             cb(null, issueStudent);
           } else {
+            // If the student has made a course request, get all subjects for those 
+            // courses and check to see if required subjects are present. If not, 
+            // create student data and invoke callback.
             database.getCourseSubjects(courseCodes, (err, subjects) => {
               let missingCourse = false;
               const issueStudent = {
@@ -345,6 +357,9 @@ const studentCourseDatabase = (() => {
     };
   };
 
+   // Students Store Query: iterate through all students. For each student,
+   // get a listing of courses and check to see if the required course ('8027_2') is 
+   // present.
   database.checkAdvisoryStatus = (cb) => {
     const transaction = db.transaction(['students'], 'readonly');
     const studentsStore = transaction.objectStore('students');
@@ -381,6 +396,11 @@ const studentCourseDatabase = (() => {
     };
   };
 
+  // Students Store Query: call getAPCourses to get a list of all AP courses.
+  // Once complete, store results in variable and interate over all students. 
+  // Iterate over each student to find those outside of the grade requirement.
+  // For those that are outside, see if their course list intersects with the AP courses.
+  // If so, create student data and invoke callback. 
   database.checkAP = (cb) => {
     database.getAPCourses((err, data) => {
       const transaction = db.transaction(['students'], 'readonly');

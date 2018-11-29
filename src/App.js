@@ -1,5 +1,3 @@
-/* eslint-env browser */
-/* eslint class-methods-use-this: ["error", { "exceptMethods": ["handleGradeCheck", "handleCreditCheck", "handleSubjectCheck", "handleAdvisoryCheck", "handleAPCheck", "convertJSONToCSV","saveReport"] }] */
 import React, { Component } from 'react';
 import './App.css';
 import csv from 'csvtojson';
@@ -32,7 +30,7 @@ class App extends Component {
   }
 
   // Method that is called each time the App component is rendered
-  // Adjusts html elements depending on currentPhase state
+  // Adjusts elements depending on currentPhase state
   updateView() {
     const { currentPhase } = this.state;
     if (currentPhase === 'waiting for data') {
@@ -136,10 +134,10 @@ class App extends Component {
     });
   }
 
-  // Open the database connection. Opening will clear the current local stores and
-  // attempt to populate with the provided JSON data. Additioanlly, disable the submission
+  // Opens the database connection. Opening will clear the current local stores and
+  // attempt to populate with the converted JSON data. Additioanlly, disable the submission
   // button and display a notification message once clicked. Continuously check for completion
-  // or error once population is submitted.
+  // or error once data has been is submitted.
   populateDatabase(event) {
     event.preventDefault();
     const message = document.createElement('div');
@@ -176,8 +174,9 @@ class App extends Component {
     });
   }
 
-  // Runs a check to see if all student grades are between 9 and 12. If not, an object containing the
-  // problematic students is returned and reported in a new element.
+  // Runs a check to intiate the grade requirement conflict check. Once complete, an object containing the
+  // problematic students is returned, stored to class property, and the ability to save conflict
+  // information is enabled.
   handleGradeCheck(event) {
     event.preventDefault();
     document.getElementById('gradeCheckBtn').setAttribute('disabled', 'disabled');
@@ -193,9 +192,10 @@ class App extends Component {
     });
   }
 
-  // Runs a check to see which students do not have credit counts between 12 and 24
+  // Runs a check to initiate the credit check requirement conflict check. 
   // Routinely checks for updates made by async operations and will
-  // load error information into new html element.
+  // load error information into new html element and store as class property once complete. 
+  // Enables the ability to save conflict report on completion as well. 
   handleCreditCheck(event) {
     event.preventDefault();
     document.getElementById('creditCheckBtn').setAttribute('disabled', 'disabled');
@@ -226,6 +226,10 @@ class App extends Component {
     });
   }
 
+  // Runs a check to initiate the subject check requirement conflict check. 
+  // Routinely checks for updates made by async operations and will
+  // load error information into new html element and store as class property once complete. 
+  // Enables the ability to save conflict report on completion as well. 
   handleSubjectCheck(event) {
     event.preventDefault();
     document.getElementById('subjectCheckBtn').setAttribute('disabled', 'disabled');
@@ -256,6 +260,10 @@ class App extends Component {
     });
   }
 
+  // Runs a check to initiate the advisory check requirement conflict check. 
+  // Routinely checks for updates made by async operations and will
+  // load error information into new html element and store as class property once complete. 
+  // Enables the ability to save conflict report on completion as well. 
   handleAdvisoryCheck(event) {
     event.preventDefault();
     document.getElementById('advisoryCheckBtn').setAttribute('disabled', 'disabled');
@@ -286,6 +294,10 @@ class App extends Component {
     });
   }
 
+  // Runs a check to initiate the AP check requirement conflict check. 
+  // Routinely checks for updates made by async operations and will
+  // load error information into new html element and store as class property once complete. 
+  // Enables the ability to save conflict report on completion as well. 
   handleAPCheck(event) {
     event.preventDefault();
     document.getElementById('apCheckBtn').setAttribute('disabled', 'disabled');
@@ -316,6 +328,7 @@ class App extends Component {
     });
   }
 
+  // Converts provided JSON object and returns CSV formatted data. 
   convertJSONToCSV(conflictObject) {
     const replacer = (key, value) => { return value === null ? '' : value; };
     const header = Object.keys(conflictObject[0]);
@@ -325,6 +338,8 @@ class App extends Component {
     return csvData;
   }
 
+  // Attempts to initiate convertsion and save of conflict 
+  // data based on which conflict button has been selected.
   saveReport(event) {
     const save = (fileName, contents) => {
       const blob = new Blob([contents], { type: 'text/plain;charset=utf-8' });
